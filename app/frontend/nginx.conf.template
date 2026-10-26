@@ -1,0 +1,33 @@
+# nginx:alpine renders *.template files with envsubst at container start,
+# so the backend address is set by your Kubernetes manifest (BACKEND_URL),
+# not baked into the image.
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location /api/ {
+        proxy_pass ${BACKEND_URL};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location = /healthz {
+        access_log off;
+        return 200 "ok\n";
+    }
+
+    # Single-page app fallback
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Hashed build assets can be cached forever
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+}
