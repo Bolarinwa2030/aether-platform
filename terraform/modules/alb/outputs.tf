@@ -1,11 +1,5 @@
-output "alb_arn" {
-    value = aws_lb.main.arn 
-}
-
-output "target_group_arn" {
-    value = aws_lb_target_group.app.arn 
-}
-
-output "alb_dns_name" {
-    value = aws_lb.main.dns_name 
+output "dns_name" { value = aws_lb.main.dns_name }
+output "arn_suffix" { value = aws_lb.main.arn_suffix }
+output "target_group_arns" {
+  value = { for k, v in aws_lb_target_group.this : k => v.arn }
 }
