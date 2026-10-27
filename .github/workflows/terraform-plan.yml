@@ -1,0 +1,46 @@
+name: terraform-plan
+
+on:
+  pull_request:
+    paths:
+      - "terraform/environment/**"
+      - "terraform/modules/**"
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  plan-dev:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/environment/dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_PLAN_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - run: terraform init -input=false
+      - run: terraform validate
+      - run: terraform plan -input=false -no-color -out=tfplan
+      - run: terraform show -no-color tfplan > plan.txt
+
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let out = fs.readFileSync('terraform/environment/dev/plan.txt', 'utf8');
+            if (out.length > 60000) out = out.slice(0, 60000) + '\n... truncated ...';
+            const body = '### Terraform plan: dev\n```\n' + out + '\n```';
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body,
+            });
