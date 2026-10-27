@@ -1,0 +1,48 @@
+name: terraform-apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Optional -target, e.g. module.ecr (empty = full apply)"
+        required: false
+        default: ""
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: terraform-dev
+  cancel-in-progress: false
+
+jobs:
+  apply-dev:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: dev
+    defaults:
+      run:
+        working-directory: terraform/environment/dev
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_APPLY_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - run: terraform init -input=false
+
+      - name: Plan
+        env:
+          TARGET: ${{ inputs.target }}
+        run: |
+          if [ -n "$TARGET" ]; then
+            terraform plan -input=false -out=tfplan -target="$TARGET"
+          else
+            terraform plan -input=false -out=tfplan
+          fi
+
+      - run: terraform apply -input=false tfplan
