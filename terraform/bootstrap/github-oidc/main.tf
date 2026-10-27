@@ -3,6 +3,11 @@ resource "aws_iam_openid_connect_provider" "github" {
   client_id_list = ["sts.amazonaws.com"]
 }
 
+locals {
+  # Exactly as GitHub sends it (includes the permanent account and repo IDs)
+  github_repo_sub = "repo:Bolarinwa2030@97180616/aether-platform@1425487824"
+}
+
 # ---------- WHO may assume the plan role ----------
 data "aws_iam_policy_document" "plan_trust" {
   statement {
@@ -22,7 +27,7 @@ data "aws_iam_policy_document" "plan_trust" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:Bolarinwa2030/aether-platform:pull_request"]
+      values   = ["${local.github_repo_sub}:pull_request"]
     }
   }
 }
