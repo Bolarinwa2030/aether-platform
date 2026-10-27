@@ -8,5 +8,5 @@ variable "repositories" {
 
 variable "force_delete" {
   type    = bool
-  default = false
+  default = true
 }
