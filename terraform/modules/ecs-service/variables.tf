@@ -1,74 +1,74 @@
-variable "name"                { 
-    type = string 
+variable "name" {
+  type = string
 }
 
-variable "environment"         { 
-    type = string 
+variable "environment" {
+  type = string
 }
 
-variable "cluster_arn"         { 
-    type = string 
+variable "cluster_arn" {
+  type = string
 }
 
-variable "image"               { 
-    type = string 
+variable "image" {
+  type = string
 }
-variable "container_port"      { 
-    type = number 
-}
-
-variable "cpu"                 { 
-    type = number  
-    default = 256 
+variable "container_port" {
+  type = number
 }
 
-variable "memory"              { 
-    type = number  
-    default = 512 
+variable "cpu" {
+  type    = number
+  default = 256
 }
 
-variable "desired_count"       { 
-    type = number  
-    default = 1 
+variable "memory" {
+  type    = number
+  default = 512
 }
 
-variable "execution_role_arn"  { 
-    type = string 
+variable "desired_count" {
+  type    = number
+  default = 1
 }
 
-variable "task_role_arn"       { 
-    type = string  
-    default = null 
+variable "execution_role_arn" {
+  type = string
 }
 
-variable "subnet_ids"          { 
-    type = list(string) 
+variable "task_role_arn" {
+  type    = string
+  default = null
 }
 
-variable "security_groups"     { 
-    type = list(string) 
+variable "subnet_ids" {
+  type = list(string)
 }
 
-variable "target_group_arn"    { 
-    type = string 
+variable "security_groups" {
+  type = list(string)
 }
 
-variable "environment_vars"    { 
-    type = map(string) 
-    default = {} 
+variable "target_group_arn" {
+  type = string
 }
 
-variable "secrets"             { 
-    type = map(string) 
-    default = {} 
+variable "environment_vars" {
+  type    = map(string)
+  default = {}
+}
+
+variable "secrets" {
+  type    = map(string)
+  default = {}
 } # name => Secrets Manager ARN
 
-variable "health_check_grace_period" { 
-    type = number 
-    default = 60 
+variable "health_check_grace_period" {
+  type    = number
+  default = 60
 }
 
-variable "log_retention_days"  { 
-    type = number 
-    default = 14 
+variable "log_retention_days" {
+  type    = number
+  default = 14
 }
