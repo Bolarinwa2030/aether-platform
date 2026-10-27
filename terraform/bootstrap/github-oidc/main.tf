@@ -93,3 +93,91 @@ resource "aws_iam_role_policy_attachment" "apply_admin" {
   role       = aws_iam_role.apply.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
+
+data "aws_caller_identity" "current" {}
+
+data "aws_iam_policy_document" "deploy_trust" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    # build job (push to main) and deploy job (environment dev)
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:sub"
+      values = [
+        "${local.github_repo_sub}:ref:refs/heads/main",
+        "${local.github_repo_sub}:environment:dev",
+      ]
+    }
+  }
+}
+
+resource "aws_iam_role" "deploy" {
+  name               = "aether-github-app-deploy"
+  assume_role_policy = data.aws_iam_policy_document.deploy_trust.json
+}
+
+data "aws_iam_policy_document" "deploy" {
+  statement {
+    sid       = "EcrLogin"
+    actions   = ["ecr:GetAuthorizationToken"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid = "EcrPush"
+    actions = [
+      "ecr:BatchCheckLayerAvailability", "ecr:BatchGetImage", "ecr:GetDownloadUrlForLayer",
+      "ecr:InitiateLayerUpload", "ecr:UploadLayerPart", "ecr:CompleteLayerUpload",
+      "ecr:PutImage", "ecr:DescribeImages",
+    ]
+    resources = ["arn:aws:ecr:us-east-1:${data.aws_caller_identity.current.account_id}:repository/dev/aether-*"]
+  }
+
+  statement {
+    sid       = "EcsTaskDefinitions"
+    actions   = ["ecs:DescribeTaskDefinition", "ecs:RegisterTaskDefinition"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "EcsServices"
+    actions   = ["ecs:UpdateService", "ecs:DescribeServices"]
+    resources = ["arn:aws:ecs:us-east-1:${data.aws_caller_identity.current.account_id}:service/dev-aether-cluster/*"]
+  }
+
+  statement {
+    sid       = "PassTaskRoles"
+    actions   = ["iam:PassRole"]
+    resources = ["arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/dev-aether-ecs-*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+      values   = ["ecs-tasks.amazonaws.com"]
+    }
+  }
+
+  statement {
+    sid       = "SmokeTestLookup"
+    actions   = ["elasticloadbalancing:DescribeLoadBalancers"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "deploy" {
+  name   = "app-deploy"
+  role   = aws_iam_role.deploy.id
+  policy = data.aws_iam_policy_document.deploy.json
+}
