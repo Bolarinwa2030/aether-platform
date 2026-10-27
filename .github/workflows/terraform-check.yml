@@ -2,7 +2,6 @@ name: terraform-check
 
 on:
   pull_request:
-    paths: [terraform/**]
 
 jobs:
   check:
