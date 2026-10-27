@@ -58,3 +58,38 @@ resource "aws_iam_role_policy" "plan_state" {
   role   = aws_iam_role.plan.id
   policy = data.aws_iam_policy_document.plan_state.json
 }
+
+data "aws_iam_policy_document" "apply_trust" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    # Only jobs running inside the GitHub Environment named "dev"
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["${local.github_repo_sub}:environment:dev"]
+    }
+  }
+}
+
+resource "aws_iam_role" "apply" {
+  name               = "aether-github-terraform-apply"
+  assume_role_policy = data.aws_iam_policy_document.apply_trust.json
+}
+
+# Broad on purpose while learning. Tighten to the services you use later.
+resource "aws_iam_role_policy_attachment" "apply_admin" {
+  role       = aws_iam_role.apply.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+}
